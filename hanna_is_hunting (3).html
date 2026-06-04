@@ -512,43 +512,44 @@ function hitQBlock(q,qsx){
 }
 
 function hitHanna(){
-  if(paused)return;
+  if(paused||!running)return;
   lives=Math.max(0,lives-1);updateHUD();
   hanna.x=60;hanna.y=GY-56;hanna.vx=0;hanna.vy=0;worldX=0;shield=false;giant=false;
-  if(lives<=0){paused=true;setTimeout(function(){showEnd(false);},400);}
+  if(lives<=0){running=false;paused=true;setTimeout(function(){showEnd(false);},400);}
 }
 
 var saamanRunX=0, saamanRunAnim=0, jubPhase=0;
 
 function showJubilee(){
   var w=getWorld();
-  // Phase 1: animate Saaman running to Hanna on canvas
   jubPhase=1;
-  saamanRunX=goalX-worldX; // start at cage position
+  saamanRunX=200;
   saamanRunAnim=0;
-  paused=false; // let render run for animation
-  // After 2 seconds show overlay
+  // stop everything cleanly
+  running=false;
+  paused=true;
+  // small delay then show overlay
   setTimeout(function(){
-    paused=true;
     var html='<div style="font-size:36px">❤️</div>'+
-      '<h2>'+w.name+' gerettet!<br>Saaman läuft zu Hanna! 🎉</h2>'+
+      '<h2>'+w.name+' gerettet!<br>Saaman ist frei! 🎉</h2>'+
       '<canvas id="jubC" width="220" height="130" style="margin:8px 0;border-radius:8px;background:rgba(255,255,255,0.05)"></canvas>'+
       '<p style="color:#ffd700">Level '+(level+1)+'/15 abgeschlossen!</p>'+
       '<p>Punkte: <span style="color:#ffd700">'+score+'</span></p>';
     var btn=level>=14?'Spiel beenden! 🏆':'Nächstes Level!';
     showOv(html,btn,function(){
       jubPhase=0;
-      if(level>=14){showEnd(true);}
-      else{
+      if(level>=14){
+        showEnd(true);
+      } else {
         level++;
         initLevel();
-        paused=false;
         running=true;
+        paused=false;
         requestAnimationFrame(function(ts){lastTime=ts;loop(ts);});
       }
     });
     setTimeout(drawJubilee,80);
-  }, 1800);
+  }, 400);
 }
 
 function drawJubilee(){
@@ -600,8 +601,14 @@ function drawPortS(c,ox,oy,sc){
 }
 
 function showEnd(won){
+  running=false;paused=true;
   showOv('<div style="font-size:48px">'+(won?'🏆':'💀')+'</div><h2>'+(won?'Gewonnen! 🎉':'Game Over!')+'</h2><p><span style="color:#ffd700;font-size:15px">Punkte: '+score+'</span><br>Level '+(level+1)+'/15</p>',
-    'Nochmal!',function(){score=0;lives=3;level=0;updateHUD();initLevel();paused=false;});
+    'Nochmal!',function(){
+      score=0;lives=3;level=0;jubPhase=0;
+      updateHUD();initLevel();
+      running=true;paused=false;
+      requestAnimationFrame(function(ts){lastTime=ts;loop(ts);});
+    });
 }
 
 function showOv(html,btnTxt,cb){
