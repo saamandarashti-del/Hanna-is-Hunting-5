@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<style>@media (orientation: portrait){#rotate-msg{display:flex!important;}#gc{display:none!important;}}</style>
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="mobile-web-app-capable" content="yes">
@@ -14,36 +15,40 @@ html,body{width:100%;height:100%;background:#111;overflow:hidden;touch-action:no
 #gc{position:fixed;top:0;left:0;width:100%;height:100%;overflow:hidden;background:#111}
 #scaler{position:absolute;top:0;left:0;transform-origin:top left;}
 canvas{display:block;touch-action:none;}
-#hud{position:absolute;top:0;left:0;right:0;height:40px;background:rgba(0,0,0,0.55);display:flex;align-items:center;justify-content:space-between;padding:0 10px;z-index:10;pointer-events:none}
-#hud span{color:#fff;font-size:11px;font-weight:700;font-family:monospace}
+#hud{position:absolute;top:0;left:0;right:0;height:38px;background:rgba(0,0,0,0.55);display:flex;align-items:center;justify-content:space-between;padding:0 10px;z-index:10;pointer-events:none}
+#hud span{color:#fff;font-size:13px;font-weight:700;font-family:monospace}
 #hud .sc{color:#ffd700}
 /* touch zones - invisible but cover play area */
-#tzl{position:absolute;top:40px;left:0;width:50%;bottom:80px;z-index:5;touch-action:none}
-#tzr{position:absolute;top:40px;right:0;width:50%;bottom:80px;z-index:5;touch-action:none}
+#tzl{position:absolute;top:38px;left:0;width:50%;bottom:70px;z-index:5;touch-action:none}
+#tzr{position:absolute;top:38px;right:0;width:50%;bottom:70px;z-index:5;touch-action:none}
 /* bottom bar */
-#ctrl{position:absolute;bottom:0;left:0;right:0;height:80px;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:space-between;padding:0 16px;z-index:10}
-.btn{height:58px;border-radius:14px;background:rgba(255,255,255,0.15);border:2px solid rgba(255,255,255,0.3);color:#fff;font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;user-select:none;-webkit-tap-highlight-color:transparent;touch-action:none;font-family:monospace}
+#ctrl{position:absolute;bottom:0;left:0;right:0;height:70px;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:space-between;padding:0 20px 8px;z-index:10}
+.btn{height:54px;border-radius:12px;background:rgba(255,255,255,0.15);border:2px solid rgba(255,255,255,0.3);color:#fff;font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;user-select:none;-webkit-tap-highlight-color:transparent;touch-action:none;font-family:monospace}
 .btn:active{background:rgba(255,255,255,0.35)}
-#hint{position:absolute;bottom:82px;left:0;right:0;text-align:center;color:rgba(255,255,255,0.5);font-size:10px;font-family:monospace;pointer-events:none;z-index:6}
+#hint{position:absolute;bottom:72px;left:0;right:0;text-align:center;color:rgba(255,255,255,0.5);font-size:10px;font-family:monospace;pointer-events:none;z-index:6}
 #ov{position:absolute;inset:0;background:rgba(0,0,0,0.88);display:none;flex-direction:column;align-items:center;justify-content:center;gap:8px;z-index:30;padding:16px}
-#ov h2{color:#ffd700;font-size:18px;font-family:monospace;text-align:center;line-height:1.4}
+#ov h2{color:#ffd700;font-size:22px;font-family:monospace;text-align:center;line-height:1.4}
 #ov p{color:#fff;font-size:11px;text-align:center;max-width:300px;line-height:1.8;font-family:monospace}
 #ov button{padding:10px 26px;background:#ff6b9d;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;color:#fff;font-family:monospace;margin-top:4px;border-bottom:3px solid #c94878}
 #start{position:absolute;inset:0;background:rgba(0,0,0,0.88);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;z-index:30;padding:16px}
-#start h2{color:#ffd700;font-size:18px;font-family:monospace;text-align:center}
-#start p{color:#fff;font-size:11px;text-align:center;max-width:300px;line-height:1.8;font-family:monospace}
+#start h2{color:#ffd700;font-size:22px;font-family:monospace;text-align:center}
+#start p{color:#fff;font-size:13px;text-align:center;max-width:300px;line-height:1.8;font-family:monospace}
 #start button{padding:10px 26px;background:#ff6b9d;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;color:#fff;font-family:monospace;margin-top:4px;border-bottom:3px solid #c94878}
 #sb{position:absolute;background:#fff;border-radius:10px 10px 10px 0;padding:3px 8px;font-size:11px;font-weight:700;color:#333;white-space:nowrap;opacity:0;transition:opacity 0.15s;z-index:20;pointer-events:none;font-family:monospace}
-#gbar{position:absolute;bottom:80px;left:0;right:0;height:3px;z-index:10;pointer-events:none}
+#gbar{position:absolute;bottom:70px;left:0;right:0;height:3px;z-index:10;pointer-events:none}
 #gbarinner{height:3px;background:#4ade80;width:0}
-#sbar{position:absolute;bottom:83px;left:0;right:0;height:3px;z-index:11;pointer-events:none}
+#sbar{position:absolute;bottom:73px;left:0;right:0;height:3px;z-index:11;pointer-events:none}
 #sbarinner{height:3px;background:#60a5fa;width:0}
 </style>
 </head>
 <body>
+<div id="rotate-msg" style="display:none;position:fixed;inset:0;background:#111;z-index:999;flex-direction:column;align-items:center;justify-content:center;color:#fff;font-family:monospace;font-size:18px;text-align:center;gap:16px">
+  <div style="font-size:60px">📱↔️</div>
+  <div>Handy drehen für<br>Querformat!</div>
+</div>
 <div id="gc">
   <div id="scaler">
-  <canvas id="cv" width="380" height="580"></canvas>
+  <canvas id="cv" width="852" height="393"></canvas>
   <div id="hud">
     <span id="lvltxt">Lv1/15</span>
     <span class="sc" id="sctxt">⭐0</span>
@@ -56,15 +61,15 @@ canvas{display:block;touch-action:none;}
   <!-- invisible touch zones -->
   <div id="tzl"></div>
   <div id="tzr"></div>
-  <div id="hint">👈 links | rechts 👉 &nbsp;&nbsp; ↑ wischen = springen &nbsp;&nbsp; ↓ wischen = ducken</div>
+  <div id="hint">← ziehen = links &nbsp;&nbsp; → ziehen = rechts &nbsp;&nbsp; ↑ wischen = springen</div>
   <div id="ctrl">
-    <div style="color:rgba(255,255,255,0.4);font-size:10px;font-family:monospace;line-height:1.4">👈 links<br>👉 rechts<br>↑↓ wischen</div>
+    <div style="color:rgba(255,255,255,0.4);font-size:10px;font-family:monospace;line-height:1.4">← → ziehen<br>↑ springen<br>↓ ducken</div>
     <div class="btn" id="bs" style="width:70px;background:rgba(255,200,0,0.2);border-color:rgba(255,200,0,0.5);color:#ffd700;font-size:18px">🍿</div>
   </div>
   <div id="start">
     <div style="font-size:40px">🍿</div>
     <h2>Hanna is Hunting!</h2>
-    <p>👈 linke Seite = links laufen<br>👉 rechte Seite = rechts laufen<br>↑ nach oben wischen = springen<br>↓ nach unten wischen = ducken<br>🍿 Button = Popcorn schießen<br><br>🍉 Wassermelone = Jackpot!<br>🧅 Lauch = Riesig! (Feinde platt!)<br>❓ Fragezeichen = Bonus!<br>🧑‍🍳 Boss mit 🍿 besiegen</p>
+    <p>← Finger nach links ziehen = links<br>→ Finger nach rechts ziehen = rechts<br>↑ nach oben wischen = springen<br>↓ nach unten wischen = ducken<br>🍿 Button = Popcorn schießen<br><br>🍉 Wassermelone = Jackpot!<br>🧅 Lauch = Riesig! (Feinde platt!)<br>❓ Fragezeichen = Bonus!<br>🧑‍🍳 Boss mit 🍿 besiegen</p>
     <button id="stbtn">Los geht's!</button>
   </div>
   <div id="ov">
@@ -74,7 +79,7 @@ canvas{display:block;touch-action:none;}
 </div>
 <script>
 const cv=document.getElementById('cv'),ctx=cv.getContext('2d');
-const W=380,H=580,GY=490;
+const W=852,H=393,GY=310;
 
 const WORLDS=[
   {name:'Wiese',sky:'#78c8f0',ground:'#5a9e30',groundTop:'#7ac840',platC:'#8B5E3C',platTop:'#a07040',cloud:'rgba(255,255,255,0.85)',levels:[0,1,2]},
@@ -141,36 +146,26 @@ var keys={left:false,right:false,jump:false,shoot:false,duck:false};
 var lastShot=0;
 var speechText='',speechX=0,speechY=0,speechUntil=0;
 var stars=[];
-for(var i=0;i<80;i++) stars.push({x:Math.random()*W,y:Math.random()*300,r:Math.random()*1.5+0.5,t:Math.random()*Math.PI*2});
+for(var i=0;i<80;i++) stars.push({x:Math.random()*W,y:Math.random()*180,r:Math.random()*1.5+0.5,t:Math.random()*Math.PI*2});
 
 // ---- TOUCH CONTROLS ----
 var touchStartY={},touchStartX={},touchSide={};
 
 function setupTouch(){
-  var gc=document.getElementById('gc');
-  gc.addEventListener('touchstart',onTS,{passive:false});
-  gc.addEventListener('touchend',onTE,{passive:false});
-  gc.addEventListener('touchmove',onTM,{passive:false});
+  // Listen on the whole document so swipe works anywhere
+  document.addEventListener('touchstart',onTS,{passive:false});
+  document.addEventListener('touchend',onTE,{passive:false});
+  document.addEventListener('touchmove',onTM,{passive:false});
 }
 
 function onTS(e){
   e.preventDefault();
   for(var i=0;i<e.changedTouches.length;i++){
     var t=e.changedTouches[i];
-    var rect=cv.getBoundingClientRect();
-    var sc2=window._gameScale||1;
-    var ox2=window._gameOffX||0, oy2=window._gameOffY||0;
-    var gcRect=document.getElementById('gc').getBoundingClientRect();
-    var tx=(t.clientX-gcRect.left-ox2)/sc2;
-    var ty=(t.clientY-gcRect.top-oy2)/sc2;
-    // ignore HUD and bottom bar
-    if(ty<40||ty>H-80) continue;
-    touchStartY[t.identifier]=ty;
-    touchStartX[t.identifier]=tx;
-    var side=tx<W/2?'left':'right';
-    touchSide[t.identifier]=side;
-    if(side==='left') keys.left=true;
-    else keys.right=true;
+    var id=t.identifier;
+    touchStartY[id]=t.clientY;
+    touchStartX[id]=t.clientX;
+    touchSide[id]='none';
   }
 }
 
@@ -180,15 +175,39 @@ function onTM(e){
     var t=e.changedTouches[i];
     var id=t.identifier;
     if(touchStartY[id]===undefined) continue;
-    var rect=cv.getBoundingClientRect();
-    var ty=t.clientY-rect.top;
-    var dy=touchStartY[id]-ty; // positive = swipe up
-    var dx=Math.abs(t.clientX-rect.left-touchStartX[id]);
-    if(Math.abs(dy)>18&&dx<40){
-      if(dy>0){keys.jump=true;setTimeout(function(){keys.jump=false;},100);}
-      else{keys.duck=true;setTimeout(function(){keys.duck=false;},300);}
-      // reset so we don't re-trigger
-      touchStartY[id]=ty;
+    var dx=t.clientX-touchStartX[id]; // positive=right, negative=left
+    var dy=touchStartY[id]-t.clientY; // positive=up, negative=down
+    var adx=Math.abs(dx), ady=Math.abs(dy);
+
+    if(ady>adx && ady>20){
+      // vertical swipe dominates
+      // reset left/right from this finger
+      if(touchSide[id]==='left'){keys.left=false;}
+      if(touchSide[id]==='right'){keys.right=false;}
+      touchSide[id]='none';
+      if(dy>0){
+        keys.jump=true;
+        setTimeout(function(){keys.jump=false;},130);
+      } else {
+        keys.duck=true;
+        setTimeout(function(){keys.duck=false;},350);
+      }
+      // reset so it doesn't keep firing
+      touchStartY[id]=t.clientY;
+      touchStartX[id]=t.clientX;
+    } else if(adx>18){
+      // horizontal drag = direction
+      if(dx>0){
+        // dragging right
+        if(touchSide[id]==='left'){keys.left=false;}
+        touchSide[id]='right';
+        keys.right=true;keys.left=false;
+      } else {
+        // dragging left
+        if(touchSide[id]==='right'){keys.right=false;}
+        touchSide[id]='left';
+        keys.left=true;keys.right=false;
+      }
     }
   }
 }
@@ -201,8 +220,12 @@ function onTE(e){
     var side=touchSide[id];
     if(side==='left') keys.left=false;
     else if(side==='right') keys.right=false;
-    delete touchStartY[id];delete touchStartX[id];delete touchSide[id];
+    delete touchStartY[id];
+    delete touchStartX[id];
+    delete touchSide[id];
   }
+  // safety - if no touches left, stop movement
+  if(e.touches.length===0){keys.left=false;keys.right=false;}
 }
 
 // shoot button
@@ -703,7 +726,7 @@ function drawBg(w){
 
 function drawClouds(w){
   var pos=[60,180,310,430,570,700,850];
-  for(var i=0;i<pos.length;i++){var sx=((pos[i]-worldX*0.25)%(W+200)+W+200)%(W+200)-80,cy=55+i%3*28;ctx.fillStyle=w.cloud;ctx.beginPath();ctx.ellipse(sx,cy,48,20,0,0,Math.PI*2);ctx.fill();ctx.beginPath();ctx.ellipse(sx+28,cy-10,34,17,0,0,Math.PI*2);ctx.fill();ctx.beginPath();ctx.ellipse(sx-22,cy-5,26,14,0,0,Math.PI*2);ctx.fill();}
+  for(var i=0;i<pos.length;i++){var sx=((pos[i]-worldX*0.25)%(W+200)+W+200)%(W+200)-80,cy=30+i%3*20;ctx.fillStyle=w.cloud;ctx.beginPath();ctx.ellipse(sx,cy,48,20,0,0,Math.PI*2);ctx.fill();ctx.beginPath();ctx.ellipse(sx+28,cy-10,34,17,0,0,Math.PI*2);ctx.fill();ctx.beginPath();ctx.ellipse(sx-22,cy-5,26,14,0,0,Math.PI*2);ctx.fill();}
 }
 
 function drawHanna(){
@@ -766,14 +789,13 @@ function scaleGame(){
   var gc=document.getElementById('gc');
   var sc=document.getElementById('scaler');
   if(!gc||!sc)return;
-  var sw=gc.clientWidth, sh=gc.clientHeight;
-  var GW=380, GH=580;
+  var sw=window.innerWidth, sh=window.innerHeight;
+  var GW=852, GH=393;
   var scale=Math.min(sw/GW, sh/GH);
   var ox=(sw-GW*scale)/2, oy=(sh-GH*scale)/2;
   sc.style.transform='translate('+ox+'px,'+oy+'px) scale('+scale+')';
   sc.style.width=GW+'px';
   sc.style.height=GH+'px';
-  // store scale for touch coordinate correction
   window._gameScale=scale;
   window._gameOffX=ox;
   window._gameOffY=oy;
