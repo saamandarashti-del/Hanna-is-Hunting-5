@@ -139,9 +139,11 @@ const POOL=[
 const QCONTENTS=['life','points','mushroom','shield','points','mushroom','life','shield'];
 
 var score=0,lives=3,level=0,running=false;
+var highScore=parseInt(localStorage.getItem('hannaHS')||'0');
+function saveHS(){if(score>highScore){highScore=score;localStorage.setItem('hannaHS',score);}}
 var giant=false,giantEnd=0,shield=false,shieldEnd=0;
 var worldX=0,paused=false,ducking=false;
-var hanna,platforms,items,enemies,boss,goalX,pops,parts,qblocks,projectiles;
+var hanna,platforms,items,enemies,boss,goalX,pops,parts,qblocks,projectiles,traps;
 var keys={left:false,right:false,jump:false,shoot:false,duck:false};
 var lastShot=0;
 var speechText='',speechX=0,speechY=0,speechUntil=0;
@@ -308,6 +310,20 @@ function initLevel(){
     items.push({e:item.e,pts:item.pts,type:item.type,wx:cx,y:cy,got:false,bob:Math.random()*Math.PI*2});
   }
 
+  // Traps - lava, spikes, pits based on world
+  traps=[];
+  var trapCount=2+Math.floor(level*0.4);
+  var w2=getWorld();
+  for(var i=0;i<trapCount;i++){
+    var tx=300+Math.random()*(goalX-500);
+    var ttype;
+    if(w2.name==='Vulkan'||w2.name==='Wüste') ttype='lava';
+    else if(w2.name==='Winter'||w2.name==='Berge') ttype='spikes';
+    else if(w2.name==='Strand'||w2.name==='Zadar') ttype='pit';
+    else ttype=['lava','spikes','pit'][Math.floor(Math.random()*3)];
+    traps.push({wx:tx,type:ttype,w:ttype==='pit'?80:50,active:true});
+  }
+
   enemies=[];
   var eCount=2+Math.floor(level*0.5);
   var etypes=cfg.enemyTypes;
@@ -377,10 +393,43 @@ function tick(dt){
   var scroll=hanna.x-150;
   if(scroll>0){worldX+=scroll*0.13;hanna.x-=scroll*0.13;}
   hanna.onGround=false;
-  if(hanna.y+hanna.h>=GY){hanna.y=GY-hanna.h;hanna.vy=0;hanna.onGround=true;}
+  // Check if over a pit
+  var overPit=false;
+  if(traps){for(var i=0;i<traps.length;i++){var tr2=traps[i];if(tr2.type==='pit'&&tr2.active){var tsx2=tr2.wx-worldX;if(hanna.x+hw>tsx2+8&&hanna.x<tsx2+tr2.w-8){overPit=true;break;}}}}
+  if(!overPit&&hanna.y+hanna.h>=GY){hanna.y=GY-hanna.h;hanna.vy=0;hanna.onGround=true;}
   if(hanna.x<4)hanna.x=4;
   hanna.state=!hanna.onGround?'jump':ducking?'duck':Math.abs(hanna.vx)>0.3?'walk':'idle';
 
+  // Draw traps
+  if(traps){
+    for(var i=0;i<traps.length;i++){
+      var tr=traps[i];if(!tr.active)continue;
+      var tsx=tr.wx-worldX;
+      if(tsx+tr.w<-10||tsx>W+10)continue;
+      if(tr.type==='lava'){
+        // lava pool
+        ctx.fillStyle='#ff4400';ctx.fillRect(tsx,GY-10,tr.w,14);
+        ctx.fillStyle='#ff8800';
+        for(var lj=0;lj<3;lj++){
+          var lx2=tsx+8+lj*(tr.w/3);
+          ctx.beginPath();ctx.moveTo(lx2-6,GY-10);ctx.lineTo(lx2,GY-22);ctx.lineTo(lx2+6,GY-10);ctx.fill();
+        }
+        ctx.fillStyle='rgba(255,100,0,0.3)';ctx.fillRect(tsx,GY-24,tr.w,14);
+      } else if(tr.type==='spikes'){
+        ctx.fillStyle='#aaa';
+        var spCount=Math.floor(tr.w/12);
+        for(var sj=0;sj<spCount;sj++){
+          var spx=tsx+sj*12+6;
+          ctx.beginPath();ctx.moveTo(spx-5,GY);ctx.lineTo(spx,GY-20);ctx.lineTo(spx+5,GY);ctx.fill();
+        }
+        ctx.fillStyle='#888';ctx.fillRect(tsx,GY-2,tr.w,6);
+      } else if(tr.type==='pit'){
+        // draw darkness in pit
+        ctx.fillStyle='#000';ctx.fillRect(tsx,GY,tr.w,H-GY);
+        ctx.fillStyle='#111';ctx.fillRect(tsx,GY-4,tr.w,8);
+      }
+    }
+  }
   for(var i=0;i<platforms.length;i++){
     var p=platforms[i],sx=p.wx-worldX;
     if(hanna.x+hanna.w>sx&&hanna.x<sx+p.w&&hanna.y+hanna.h>p.y&&hanna.y+hanna.h<p.y+hanna.h*0.7&&hanna.vy>=0){
@@ -414,7 +463,13 @@ function tick(dt){
       if(c.type==='fruit'||c.type==='watermelon'){hanna.jt=40;setSpeech('Juchuuu! 🎉',sx,sy);}
       if(c.type==='watermelon')setSpeech('JACKPOT! 🍉',sx,sy);
       if(c.type==='leek'){giant=true;giantEnd=Date.now()+30000;setSpeech('Riesig! 💪 Feinde platt!',sx,sy);}
-      if(c.type==='meat')setSpeech('Igitt! 🥩',sx,sy);
+      if(c.type==='meat'){
+        setSpeech('Igitt! 🥩 -½ Leben!',sx,sy);
+        lives=Math.max(0,lives-0.5);
+        if(lives<=0){stopLoop();setTimeout(function(){showEnd(false);},400);return;}
+        hanna.stumble=40; // stumble timer
+        updateHUD();
+      }
       updateHUD();
     }
   }
@@ -437,7 +492,7 @@ function tick(dt){
     // wizard shoots occasionally
     if(e.type==='wizard'){
       e.ft2=(e.ft2||0)+dt;
-      if(e.ft2>90){e.ft2=0;var ex2=e.wx-worldX;projectiles.push({x:ex2+16,y:e.y+10,vx:(hanna.x>ex2?1:-1)*3,vy:0,type:'fireball',life:1});}
+      if(e.ft2>90){e.ft2=0;var ex2=e.wx-worldX;var wzAimY=hanna.y+hanna.h*0.65;projectiles.push({x:ex2+16,y:wzAimY,vx:(hanna.x>ex2?1:-1)*3,vy:0,type:'fireball',life:1});}
     }
     var ex=e.wx-worldX;
     var overX=hanna.x+hw>ex&&hanna.x<ex+e.w;
@@ -479,10 +534,10 @@ function tick(dt){
       boss.atkTimer=0;
       var bsx2=boss.wx-worldX;var dir=hanna.x>bsx2?1:-1;
       if(boss.atk==='fireball'){
-        projectiles.push({x:bsx2+boss.w/2,y:boss.y+boss.h*0.3,vx:dir*4,vy:0,type:'fireball',life:1});
-        projectiles.push({x:bsx2+boss.w/2,y:boss.y+boss.h*0.3,vx:dir*3.5,vy:-1.5,type:'fireball',life:1});
+        var aimY=hanna.y+hanna.h*0.65;projectiles.push({x:bsx2+boss.w/2,y:aimY,vx:dir*4,vy:0,type:'fireball',life:1});
+        projectiles.push({x:bsx2+boss.w/2,y:aimY,vx:dir*3.5,vy:-0.5,type:'fireball',life:1});
       } else if(boss.atk==='laser'){
-        projectiles.push({x:bsx2+(dir>0?boss.w:0),y:boss.y+boss.h*0.4,vx:dir*6,vy:0,type:'laser',life:1});
+        var aimY2=hanna.y+hanna.h*0.65;projectiles.push({x:bsx2+(dir>0?boss.w:0),y:aimY2,vx:dir*6,vy:0,type:'laser',life:1});
       } else if(boss.atk==='stomp'&&boss.vy2===0){
         boss.vy2=-10;
       } else if(boss.atk==='lunge'){
@@ -498,7 +553,7 @@ function tick(dt){
       if(pp.life>0&&pp.x>bsx&&pp.x<bsx+boss.w&&pp.y>boss.y&&pp.y<boss.y+boss.h){
         pp.life=0;boss.hp--;boss.flash=8;spawnP(bsx+boss.w/2,boss.y+boss.h/2,15,'#ffd700');
         setSpeech(boss.hp>0?'Noch '+boss.hp+'x! 🍿':'K.O.! 🎉',bsx,boss.y);
-        if(boss.hp<=0){boss.alive=false;spawnP(bsx+boss.w/2,boss.y+boss.h/2,30,'#ff6b9d');stopLoop();setTimeout(showJubilee,400);}
+        if(boss.hp<=0){boss.alive=false;spawnP(bsx+boss.w/2,boss.y+boss.h/2,30,'#ff6b9d');stopLoop();saveHS();setTimeout(showJubilee,400);}
       }
     }
   }
@@ -520,6 +575,22 @@ function tick(dt){
 
   if(giant){var rem=Math.max(0,giantEnd-Date.now())/30000;document.getElementById('gbarinner').style.width=(rem*100)+'%';document.getElementById('gbarinner').style.background=rem<0.3?'#f87171':'#4ade80';}
   if(shield){var rem=Math.max(0,shieldEnd-Date.now())/8000;document.getElementById('sbarinner').style.width=(rem*100)+'%';}
+  // Trap collision
+  if(traps){
+    for(var i=0;i<traps.length;i++){
+      var tr=traps[i];if(!tr.active)continue;
+      var tsx=tr.wx-worldX;
+      if(tr.type==='pit'){
+        // pit = gap in ground, fall through
+        // handled by ground check - if hanna is over pit she falls
+      } else {
+        // lava/spikes - touch = lose life
+        if(hanna.x+hw>tsx&&hanna.x<tsx+tr.w&&hanna.y+hh>GY-12&&hanna.y+hh<GY+20){
+          if(!shield){hitHanna();return;}
+        }
+      }
+    }
+  }
   if(hanna.y>H+60)hitHanna();
 }
 
@@ -536,7 +607,7 @@ function hitHanna(){
   if(paused||!running)return;
   lives=Math.max(0,lives-1);updateHUD();
   hanna.x=60;hanna.y=GY-56;hanna.vx=0;hanna.vy=0;worldX=0;shield=false;giant=false;
-  if(lives<=0){stopLoop();setTimeout(function(){showEnd(false);},400);}
+  if(lives<=0){saveHS();stopLoop();setTimeout(function(){showEnd(false);},400);}
 }
 
 var saamanRunX=0, saamanRunAnim=0, jubPhase=0;
@@ -640,7 +711,7 @@ function showOv(html,btnTxt,cb){
 }
 
 function updateHUD(){
-  document.getElementById('sctxt').textContent='⭐'+score;
+  document.getElementById('sctxt').textContent='⭐'+score+(highScore>0?' 🏆'+highScore:'');
   document.getElementById('lvltxt').textContent='Lv'+(level+1)+'/15';
   var h='';for(var i=0;i<lives;i++)h+='❤️';
   document.getElementById('livtxt').textContent=h||'💀';
@@ -667,13 +738,14 @@ function render(){
   }
 
   drawCage();
-  // Saaman running animation
+  // Saaman running toward Hanna
   if(jubPhase===1){
-    saamanRunAnim+=0.15;
-    // Saaman runs from cage toward hanna
-    var targetX=hanna.x+hanna.w+10;
+    saamanRunAnim+=0.2;
+    var targetX=hanna.x+hanna.w+14;
+    // Saaman starts at right side of screen and runs LEFT toward Hanna
+    if(saamanRunX>W+40) saamanRunX=W+40;
     if(saamanRunX>targetX+5){
-      saamanRunX-=3;
+      saamanRunX-=4;
     }
     var ssx=saamanRunX, ssy=GY-56;
     // draw saaman running
@@ -829,7 +901,8 @@ function drawHanna(){
   var legSway=isWalk?Math.sin(wf*Math.PI/2)*10*sc:0,armSway=isWalk?Math.cos(wf*Math.PI/2)*12*sc:0;
   var bodyBob=isWalk&&hanna.onGround?Math.abs(Math.sin(wf*Math.PI/2))*-2*sc:0;
   var jumpLeg=isJump?-20*sc:0,jumpArm=isJump?-30*sc:0;
-  var jRot=juchu?Math.sin(Date.now()*0.02)*0.3:0;
+  if(hanna.stumble>0)hanna.stumble-=1;
+  var jRot=juchu?Math.sin(Date.now()*0.02)*0.3:hanna.stumble>0?Math.sin(Date.now()*0.05)*0.25:0;
   ctx.save();ctx.translate(bx+bw/2,by+32*sc);ctx.rotate(jRot);ctx.translate(-(bx+bw/2),-(by+32*sc));
   var ox=bx+bw/2,oy=by+bodyBob;
   if(isDuck){
