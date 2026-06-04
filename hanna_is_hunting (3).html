@@ -322,12 +322,24 @@ function spawnP(x,y,c,n){
 function setSpeech(txt,x,y){speechText=txt;speechX=x;speechY=y-10;speechUntil=Date.now()+1800;}
 
 var lastTime=0;
+var frameId=null;
 function loop(ts){
-  if(!running)return;
+  if(!running){frameId=null;return;}
   var dt=Math.min((ts-lastTime)/16.67,3);lastTime=ts;
   if(!paused)tick(dt);
   render();
-  requestAnimationFrame(loop);
+  frameId=requestAnimationFrame(loop);
+}
+
+function startLoop(){
+  if(frameId)cancelAnimationFrame(frameId);
+  running=true;paused=false;
+  frameId=requestAnimationFrame(function(ts){lastTime=ts;loop(ts);});
+}
+
+function stopLoop(){
+  running=false;
+  if(frameId){cancelAnimationFrame(frameId);frameId=null;}
 }
 
 function tick(dt){
@@ -477,7 +489,7 @@ function tick(dt){
       if(pp.life>0&&pp.x>bsx&&pp.x<bsx+boss.w&&pp.y>boss.y&&pp.y<boss.y+boss.h){
         pp.life=0;boss.hp--;boss.flash=8;spawnP(bsx+boss.w/2,boss.y+boss.h/2,15,'#ffd700');
         setSpeech(boss.hp>0?'Noch '+boss.hp+'x! 🍿':'K.O.! 🎉',bsx,boss.y);
-        if(boss.hp<=0){boss.alive=false;spawnP(bsx+boss.w/2,boss.y+boss.h/2,30,'#ff6b9d');paused=true;setTimeout(showJubilee,500);}
+        if(boss.hp<=0){boss.alive=false;spawnP(bsx+boss.w/2,boss.y+boss.h/2,30,'#ff6b9d');stopLoop();setTimeout(showJubilee,400);}
       }
     }
   }
@@ -515,7 +527,7 @@ function hitHanna(){
   if(paused||!running)return;
   lives=Math.max(0,lives-1);updateHUD();
   hanna.x=60;hanna.y=GY-56;hanna.vx=0;hanna.vy=0;worldX=0;shield=false;giant=false;
-  if(lives<=0){running=false;paused=true;setTimeout(function(){showEnd(false);},400);}
+  if(lives<=0){stopLoop();setTimeout(function(){showEnd(false);},400);}
 }
 
 var saamanRunX=0, saamanRunAnim=0, jubPhase=0;
@@ -543,9 +555,7 @@ function showJubilee(){
       } else {
         level++;
         initLevel();
-        running=true;
-        paused=false;
-        requestAnimationFrame(function(ts){lastTime=ts;loop(ts);});
+        startLoop();
       }
     });
     setTimeout(drawJubilee,80);
@@ -606,8 +616,7 @@ function showEnd(won){
     'Nochmal!',function(){
       score=0;lives=3;level=0;jubPhase=0;
       updateHUD();initLevel();
-      running=true;paused=false;
-      requestAnimationFrame(function(ts){lastTime=ts;loop(ts);});
+      startLoop();
     });
 }
 
