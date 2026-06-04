@@ -518,16 +518,37 @@ function hitHanna(){
   if(lives<=0){paused=true;setTimeout(function(){showEnd(false);},400);}
 }
 
+var saamanRunX=0, saamanRunAnim=0, jubPhase=0;
+
 function showJubilee(){
   var w=getWorld();
-  var html='<div style="font-size:36px">❤️</div>'+
-    '<h2>'+w.name+' gerettet!<br>Saaman ist frei! 🎉</h2>'+
-    '<canvas id="jubC" width="220" height="130" style="margin:8px 0;border-radius:8px;background:rgba(255,255,255,0.05)"></canvas>'+
-    '<p style="color:#ffd700">Level '+(level+1)+'/15 abgeschlossen!</p>'+
-    '<p>Punkte: <span style="color:#ffd700">'+score+'</span></p>';
-  var btn=level>=14?'Spiel beenden! 🏆':'Nächstes Level!';
-  showOv(html,btn,function(){if(level>=14)showEnd(true);else{level++;initLevel();paused=false;}});
-  setTimeout(drawJubilee,80);
+  // Phase 1: animate Saaman running to Hanna on canvas
+  jubPhase=1;
+  saamanRunX=goalX-worldX; // start at cage position
+  saamanRunAnim=0;
+  paused=false; // let render run for animation
+  // After 2 seconds show overlay
+  setTimeout(function(){
+    paused=true;
+    var html='<div style="font-size:36px">❤️</div>'+
+      '<h2>'+w.name+' gerettet!<br>Saaman läuft zu Hanna! 🎉</h2>'+
+      '<canvas id="jubC" width="220" height="130" style="margin:8px 0;border-radius:8px;background:rgba(255,255,255,0.05)"></canvas>'+
+      '<p style="color:#ffd700">Level '+(level+1)+'/15 abgeschlossen!</p>'+
+      '<p>Punkte: <span style="color:#ffd700">'+score+'</span></p>';
+    var btn=level>=14?'Spiel beenden! 🏆':'Nächstes Level!';
+    showOv(html,btn,function(){
+      jubPhase=0;
+      if(level>=14){showEnd(true);}
+      else{
+        level++;
+        initLevel();
+        paused=false;
+        running=true;
+        requestAnimationFrame(function(ts){lastTime=ts;loop(ts);});
+      }
+    });
+    setTimeout(drawJubilee,80);
+  }, 1800);
 }
 
 function drawJubilee(){
@@ -619,6 +640,50 @@ function render(){
   }
 
   drawCage();
+  // Saaman running animation
+  if(jubPhase===1){
+    saamanRunAnim+=0.15;
+    // Saaman runs from cage toward hanna
+    var targetX=hanna.x+hanna.w+10;
+    if(saamanRunX>targetX+5){
+      saamanRunX-=3;
+    }
+    var ssx=saamanRunX, ssy=GY-56;
+    // draw saaman running
+    var sf=Math.floor(saamanRunAnim)%2;
+    ctx.save();
+    // body
+    ctx.fillStyle='#c8824a';ctx.beginPath();ctx.ellipse(ssx+16,ssy+8,10,12,0,0,Math.PI*2);ctx.fill();
+    // hair
+    ctx.fillStyle='#6b3a18';ctx.beginPath();ctx.ellipse(ssx+16,ssy,10,8,0,Math.PI,0);ctx.fill();
+    // beard
+    ctx.fillStyle='#4a2810';ctx.fillRect(ssx+6,ssy+12,20,4);
+    // shirt
+    ctx.fillStyle='#4060c0';ctx.fillRect(ssx+6,ssy+18,20,18);
+    // legs running
+    ctx.fillStyle='#333';
+    ctx.save();ctx.translate(ssx+11,ssy+36);ctx.rotate(sf===0?-0.4:0.4);ctx.fillRect(-4,0,8,16);ctx.restore();
+    ctx.save();ctx.translate(ssx+21,ssy+36);ctx.rotate(sf===0?0.4:-0.4);ctx.fillRect(-4,0,8,16);ctx.restore();
+    // arms
+    ctx.fillStyle='#c8824a';
+    ctx.save();ctx.translate(ssx+6,ssy+20);ctx.rotate(sf===0?0.5:-0.5);ctx.fillRect(-3,-2,6,14);ctx.restore();
+    ctx.save();ctx.translate(ssx+26,ssy+20);ctx.rotate(sf===0?-0.5:0.5);ctx.fillRect(-3,-2,6,14);ctx.restore();
+    // eyes
+    ctx.fillStyle='#fff';ctx.beginPath();ctx.ellipse(ssx+12,ssy+8,3,3.5,0,0,Math.PI*2);ctx.fill();ctx.beginPath();ctx.ellipse(ssx+20,ssy+8,3,3.5,0,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='#2a1a0a';ctx.beginPath();ctx.ellipse(ssx+12,ssy+8,1.5,2,0,0,Math.PI*2);ctx.fill();ctx.beginPath();ctx.ellipse(ssx+20,ssy+8,1.5,2,0,0,Math.PI*2);ctx.fill();
+    // speech
+    if(saamanRunX-hanna.x>60){
+      ctx.fillStyle='#fff';ctx.font='bold 11px monospace';ctx.textAlign='center';
+      ctx.fillText('Hanna!! ❤️',ssx+16,ssy-10);ctx.textAlign='left';
+    }
+    ctx.restore();
+    // Big heart when they meet
+    if(Math.abs(saamanRunX-hanna.x)<50){
+      ctx.font='36px serif';ctx.textAlign='center';
+      ctx.fillText('❤️',hanna.x+hanna.w/2+20,hanna.y-20);
+      ctx.textAlign='left';
+    }
+  }
   for(var i=0;i<items.length;i++){var c=items[i];if(c.got)continue;var sx=c.wx-worldX,sy=c.y+Math.sin(c.bob)*5;ctx.font=c.type==='watermelon'?'28px serif':'22px serif';ctx.fillText(c.e,sx,sy+(c.type==='watermelon'?26:22));}
 
   // projectiles
