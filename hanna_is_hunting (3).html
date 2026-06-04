@@ -159,6 +159,11 @@ function setupTouch(){
 }
 
 function onTS(e){
+  // Don't intercept touches on overlay buttons
+  var target=e.target;
+  if(target && (target.id==='ovbtn' || target.id==='stbtn' || target.tagName==='BUTTON')){
+    return;
+  }
   e.preventDefault();
   for(var i=0;i<e.changedTouches.length;i++){
     var t=e.changedTouches[i];
@@ -170,6 +175,8 @@ function onTS(e){
 }
 
 function onTM(e){
+  var target=e.target;
+  if(target && (target.id==='ovbtn' || target.id==='stbtn' || target.tagName==='BUTTON')) return;
   e.preventDefault();
   for(var i=0;i<e.changedTouches.length;i++){
     var t=e.changedTouches[i];
@@ -213,6 +220,8 @@ function onTM(e){
 }
 
 function onTE(e){
+  var target=e.target;
+  if(target && (target.id==='ovbtn' || target.id==='stbtn' || target.tagName==='BUTTON')) return;
   e.preventDefault();
   for(var i=0;i<e.changedTouches.length;i++){
     var t=e.changedTouches[i];
@@ -625,7 +634,9 @@ function showOv(html,btnTxt,cb){
   document.getElementById('ovbody').innerHTML=html;
   document.getElementById('ovbtn').textContent=btnTxt;
   ov.style.display='flex';
-  document.getElementById('ovbtn').onclick=function(){ov.style.display='none';cb();};
+  var obtn=document.getElementById('ovbtn');
+  obtn.onclick=function(){ov.style.display='none';cb();};
+  obtn.addEventListener('touchend',function(e){e.stopPropagation();ov.style.display='none';cb();},{passive:true});
 }
 
 function updateHUD(){
