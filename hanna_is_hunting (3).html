@@ -184,39 +184,27 @@ function onTM(e){
     var t=e.changedTouches[i];
     var id=t.identifier;
     if(touchStartY[id]===undefined) continue;
-    var dx=t.clientX-touchStartX[id]; // positive=right, negative=left
-    var dy=touchStartY[id]-t.clientY; // positive=up, negative=down
+    var dx=t.clientX-touchStartX[id];
+    var dy=touchStartY[id]-t.clientY;
     var adx=Math.abs(dx), ady=Math.abs(dy);
 
-    if(ady>adx && ady>20){
-      // vertical swipe dominates
-      // reset left/right from this finger
-      if(touchSide[id]==='left'){keys.left=false;}
-      if(touchSide[id]==='right'){keys.right=false;}
-      touchSide[id]='none';
-      if(dy>0){
-        keys.jump=true;
-        setTimeout(function(){keys.jump=false;},130);
-      } else {
+    // Vertical swipe: lower threshold, fires once per clear swipe gesture
+    if(ady>14 && ady>adx*0.8){
+      if(dy>0 && !keys._jumping){
+        keys.jump=true; keys._jumping=true;
+        setTimeout(function(){keys.jump=false;},110);
+        setTimeout(function(){keys._jumping=false;},300);
+      } else if(dy<-14){
         keys.duck=true;
         setTimeout(function(){keys.duck=false;},350);
       }
-      // reset so it doesn't keep firing
       touchStartY[id]=t.clientY;
       touchStartX[id]=t.clientX;
-    } else if(adx>18){
-      // horizontal drag = direction
-      if(dx>0){
-        // dragging right
-        if(touchSide[id]==='left'){keys.left=false;}
-        touchSide[id]='right';
-        keys.right=true;keys.left=false;
-      } else {
-        // dragging left
-        if(touchSide[id]==='right'){keys.right=false;}
-        touchSide[id]='left';
-        keys.left=true;keys.right=false;
-      }
+    } else if(adx>10){
+      // Horizontal: instant direction, lower threshold
+      keys.left=false; keys.right=false;
+      if(dx>0){ keys.right=true; touchSide[id]='right'; }
+      else { keys.left=true; touchSide[id]='left'; }
     }
   }
 }
@@ -293,9 +281,12 @@ function initLevel(){
 
   qblocks=[];
   var qCount=3+Math.floor(level*0.3);
-  for(var i=0;i<qCount&&i<platforms.length;i++){
-    var p=platforms[Math.floor(Math.random()*platforms.length)];
-    qblocks.push({wx:p.wx+p.w/2-16,y:p.y-48,w:32,h:32,hit:false,content:QCONTENTS[i%QCONTENTS.length],bounce:0});
+  // Place Q blocks reachable from ground (max jump ~170px)
+  for(var i=0;i<qCount;i++){
+    var qwx=200+Math.random()*(goalX-400);
+    // Always place within jump reach of ground: GY-60 to GY-160
+    var qy=GY-80-Math.random()*90;
+    qblocks.push({wx:qwx,y:qy,w:32,h:32,hit:false,content:QCONTENTS[i%QCONTENTS.length],bounce:0});
   }
 
   items=[];
@@ -331,10 +322,22 @@ function initLevel(){
   for(var i=0;i<eCount;i++){
     var etype=etypes[Math.floor(Math.random()*etypes.length)];
     var ex=240+Math.random()*(goalX-500);
-    var onP=Math.random()<0.35&&platforms.length>0;
     var ey,minX,maxX;
-    if(onP){var p=platforms[Math.floor(Math.random()*platforms.length)];ey=p.y-32;minX=p.wx;maxX=p.wx+p.w-32;}
-    else{ey=GY-32;minX=ex-80;maxX=ex+80;}
+    // ghosts float, others always on ground or platform surface
+    if(etype==='ghost'){
+      ey=GY-80-Math.random()*60; // float above ground
+      minX=ex-80;maxX=ex+80;
+    } else {
+      var onP=Math.random()<0.35&&platforms.length>0;
+      if(onP){
+        var p=platforms[Math.floor(Math.random()*platforms.length)];
+        ey=p.y-32; // sit ON TOP of platform
+        minX=p.wx+4;maxX=p.wx+p.w-36; // stay on platform, don't fall off
+      } else {
+        ey=GY-32; // sit on ground
+        minX=ex-80;maxX=ex+80;
+      }
+    }
     enemies.push({wx:ex,y:ey,w:32,h:32,vx:1,minX:minX,maxX:maxX,alive:true,fr:0,ft:0,type:etype,hp:etype==='zombie'?2:1,reviveTimer:0});
   }
 }
@@ -370,7 +373,14 @@ function stopLoop(){
 
 function tick(dt){
   var now=Date.now();
-  if(giant&&now>giantEnd){giant=false;document.getElementById('gbarinner').style.width='0';}
+  if(giant&&now>giantEnd){
+    giant=false;
+    // shift back down when shrinking
+    hanna.y+=(56*1.7-56);
+    // clamp so she doesn't go below ground
+    if(hanna.y+hanna.h>GY) hanna.y=GY-hanna.h;
+    document.getElementById('gbarinner').style.width='0';
+  }
   if(shield&&now>shieldEnd){shield=false;document.getElementById('sbarinner').style.width='0';}
 
   ducking=keys.duck&&hanna.onGround;
@@ -380,7 +390,9 @@ function tick(dt){
     if(keys.left){hanna.vx-=0.9*dt;hanna.dir=-1;}
     if(keys.right){hanna.vx+=0.9*dt;hanna.dir=1;}
   }
-  hanna.vx*=Math.pow(0.80,dt);
+  // Snappier: stop fast when no input, accelerate fast
+  if(!keys.left&&!keys.right) hanna.vx*=Math.pow(0.70,dt);
+  else hanna.vx*=Math.pow(0.85,dt);
   if(hanna.vx>spd)hanna.vx=spd;
   if(hanna.vx<-spd)hanna.vx=-spd;
   if(keys.jump&&hanna.onGround&&!ducking){hanna.vy=-15;hanna.onGround=false;keys.jump=false;}
@@ -433,7 +445,14 @@ function tick(dt){
       spawnP(sx+13,sy+13,c.pts>0?'#ffd700':'#f87171',8);
       if(c.type==='fruit'||c.type==='watermelon'){hanna.jt=40;setSpeech('Juchuuu! 🎉',sx,sy);}
       if(c.type==='watermelon')setSpeech('JACKPOT! 🍉',sx,sy);
-      if(c.type==='leek'){giant=true;giantEnd=Date.now()+30000;setSpeech('Riesig! 💪 Feinde platt!',sx,sy);}
+      if(c.type==='leek'){
+        if(!giant){
+          // shift Hanna UP so she grows upward not downward
+          hanna.y-=(56*1.7-56);
+        }
+        giant=true;giantEnd=Date.now()+30000;
+        setSpeech('Riesig! 💪 Feinde platt!',sx,sy);
+      }
       if(c.type==='meat'){
         setSpeech('Igitt! 🥩 -½ Leben!',sx,sy);
         halfLives=Math.max(0,halfLives-1);
@@ -573,7 +592,10 @@ function hitQBlock(q,qsx){
   spawnP(qsx+16,q.y,'#ffd700',10);
   if(q.content==='life'){lives=Math.min(9,lives+1);updateHUD();setSpeech('+1 Leben! ❤️',qsx,q.y);}
   else if(q.content==='points'){score+=100;updateHUD();setSpeech('+100 ⭐',qsx,q.y);}
-  else if(q.content==='mushroom'){giant=true;giantEnd=Date.now()+15000;setSpeech('Super Pilz! 🍄',qsx,q.y);}
+  else if(q.content==='mushroom'){
+    if(!giant) hanna.y-=(56*1.7-56);
+    giant=true;giantEnd=Date.now()+15000;setSpeech('Super Pilz! 🍄',qsx,q.y);
+  }
   else if(q.content==='shield'){shield=true;shieldEnd=Date.now()+8000;setSpeech('Schild! 🛡️',qsx,q.y);}
   updateHUD();
 }
