@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-<style>@media (orientation: portrait){#rotate-msg{display:flex!important;}#gc{display:none!important;}}</style>
+<style>@media (orientation: portrait){#rotate-msg{display:flex!important;}}</style>
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="mobile-web-app-capable" content="yes">
@@ -42,7 +42,7 @@ canvas{display:block;touch-action:none;}
 </style>
 </head>
 <body>
-<div id="rotate-msg" style="display:none;position:fixed;inset:0;background:#111;z-index:999;flex-direction:column;align-items:center;justify-content:center;color:#fff;font-family:monospace;font-size:18px;text-align:center;gap:16px">
+<div id="rotate-msg" style="display:none;position:fixed;inset:0;background:#111;z-index:9999;flex-direction:column;align-items:center;justify-content:center;color:#fff;font-family:monospace;font-size:18px;text-align:center;gap:16px">
   <div style="font-size:60px">📱↔️</div>
   <div>Handy drehen für<br>Querformat!</div>
 </div>
@@ -64,7 +64,8 @@ canvas{display:block;touch-action:none;}
   <div id="hint">← ziehen = links &nbsp;&nbsp; → ziehen = rechts &nbsp;&nbsp; ↑ wischen = springen</div>
   <div id="ctrl">
     <div style="color:rgba(255,255,255,0.4);font-size:10px;font-family:monospace;line-height:1.4">← → ziehen<br>↑ springen<br>↓ ducken</div>
-    <div class="btn" id="bs" style="width:70px;background:rgba(255,200,0,0.2);border-color:rgba(255,200,0,0.5);color:#ffd700;font-size:18px">🍿</div>
+    <div class="btn" id="bs" style="width:62px;background:rgba(255,200,0,0.2);border-color:rgba(255,200,0,0.5);color:#ffd700;font-size:18px">🍿</div>
+    <div class="btn" id="bfb" style="width:62px;background:rgba(255,80,0,0.25);border-color:rgba(255,80,0,0.6);color:#ff4400;font-size:18px;display:none">🔥</div>
   </div>
   <div id="start">
     <div style="font-size:40px">🍿</div>
@@ -408,7 +409,7 @@ function tick(dt){
   if(keys.shoot&&now-lastShot>350&&!ducking){lastShot=now;pops.push({x:hanna.x+(hanna.dir>0?hanna.w+4:-4),y:hanna.y+hanna.h*0.4,vx:hanna.dir*10,life:1,piercing:false});}
   if(keys.fire&&fireballMode&&now-lastShot>250&&!ducking){
     lastShot=now;
-    pops.push({x:hanna.x+(hanna.dir>0?hanna.w+4:−8),y:hanna.y+16,vx:hanna.dir*11,life:1.2,piercing:true,isFire:true});
+    pops.push({x:hanna.x+(hanna.dir>0?hanna.w+4:-8),y:hanna.y+16,vx:hanna.dir*11,life:1.2,piercing:true,isFire:true});
   }
 
   hanna.vy+=0.7*dt;hanna.x+=hanna.vx*dt;hanna.y+=hanna.vy*dt;
@@ -1020,8 +1021,7 @@ function drawHanna(){
 
 document.getElementById('stbtn').addEventListener('click',function(){
   document.getElementById('start').style.display='none';
-  scaleGame();setupTouch();initLevel();updateHUD();running=true;
-  requestAnimationFrame(function(ts){lastTime=ts;loop(ts);});
+  scaleGame();setupTouch();initLevel();updateHUD();startLoop();
 });
 </script>
 
