@@ -140,7 +140,7 @@ const POOL=[
 const QCONTENTS=['life','points','mushroom','shield','fireball','points','mushroom','life','shield','fireball'];
 
 var score=0,lives=3,halfLives=6,level=0,running=false;
-var fireballMode=false,fireballEnd=0;
+var fireballMode=false,fireballEnd=0,jubStarted=false;
 var highScore=parseInt(localStorage.getItem('hannaHS')||'0');
 function saveHS(){if(score>highScore){highScore=score;localStorage.setItem('hannaHS',score);}}
 var giant=false,giantEnd=0,shield=false,shieldEnd=0;
@@ -267,7 +267,7 @@ function getWorld(){
 
 function initLevel(){
   var cfg=LEVEL_CFG[Math.min(level,LEVEL_CFG.length-1)];
-  worldX=0;paused=false;ducking=false;
+  worldX=0;paused=false;ducking=false;jubStarted=false;
   giant=false;giantEnd=0;shield=false;shieldEnd=0;fireballMode=false;
   halfLives=lives*2;
   pops=[];parts=[];projectiles=[];
@@ -325,6 +325,7 @@ function initLevel(){
     traps.push({wx:tx,type:ttype,w:ttype==='pit'?80:50,active:true});
   }
 
+  updateHUD();
   enemies=[];
   var eCount=2+Math.floor(level*0.5);
   var etypes=cfg.enemyTypes;
@@ -496,8 +497,12 @@ function tick(dt){
     if(e.wx<e.minX||e.wx>e.maxX)e.vx*=-1;
     // wizard shoots occasionally
     if(e.type==='wizard'){
-      e.ft2=(e.ft2||0)+dt;
-      if(e.ft2>90){e.ft2=0;var ex2=e.wx-worldX;var wzAimY=hanna.y+hanna.h*0.65;projectiles.push({x:ex2+16,y:wzAimY,vx:(hanna.x>ex2?1:-1)*3,vy:0,type:'fireball',life:1});}
+      e.shootT=(e.shootT||0)+dt;
+      var shootCd=Math.max(60,120-level*5);
+      if(e.shootT>shootCd){
+        e.shootT=0;var ex2=e.wx-worldX;
+        if(ex2>-50&&ex2<W+50){var wzAimY=hanna.y+hanna.h*0.6;projectiles.push({x:ex2+16,y:wzAimY,vx:(hanna.x>ex2?1:-1)*5,vy:0,type:'fireball',life:1.2});}
+      }
     }
     var ex=e.wx-worldX;
     var overX=hanna.x+hw>ex&&hanna.x<ex+e.w;
@@ -561,19 +566,23 @@ function tick(dt){
       if(pp.life>0&&pp.x>bsx&&pp.x<bsx+boss.w&&pp.y>boss.y&&pp.y<boss.y+boss.h){
         if(!pp.piercing)pp.life=0;boss.hp--;boss.flash=8;spawnP(bsx+boss.w/2,boss.y+boss.h/2,pp.isFire?20:15,pp.isFire?'#ff6600':'#ffd700');
         setSpeech(boss.hp>0?'Noch '+boss.hp+'x! '+(pp.isFire?'🔥':'🍿'):'K.O.! 🎉',bsx,boss.y);
-        if(boss.hp<=0){boss.alive=false;spawnP(bsx+boss.w/2,boss.y+boss.h/2,30,'#ff6b9d');stopLoop();saveHS();setTimeout(showJubilee,400);}
+        if(boss.hp<=0){boss.alive=false;if(!jubStarted){jubStarted=true;spawnP(bsx+boss.w/2,boss.y+boss.h/2,30,'#ff6b9d');stopLoop();saveHS();setTimeout(showJubilee,400);}}
       }
     }
   }
 
   // projectiles
+  // recalc hanna hit dimensions
+  var phw=giant?52:hanna.w;
+  var phh=ducking?hanna.h*0.55:hanna.h;
+  var phy=ducking?hanna.y+hanna.h-phh:hanna.y;
   for(var i=projectiles.length-1;i>=0;i--){
     var pr=projectiles[i];
     pr.x+=pr.vx*dt;pr.y+=pr.vy*dt;pr.life-=0.006*dt;
-    if(pr.x<-60||pr.x>worldX+W+100||pr.life<=0){projectiles.splice(i,1);continue;}
+    if(pr.x<-100||pr.x>W+200||pr.life<=0){projectiles.splice(i,1);continue;}
     if(shield){continue;}
-    var dodged=ducking&&pr.y<(hanna.y+hanna.h*0.5);
-    if(!dodged&&hanna.x+hw>pr.x-10&&hanna.x<pr.x+10&&hy+hh>pr.y-10&&hy<pr.y+10){
+    var dodged=ducking&&pr.y<(phy+phh*0.5);
+    if(!dodged&&hanna.x+phw>pr.x-10&&hanna.x<pr.x+10&&phy+phh>pr.y-10&&phy<pr.y+10){
       projectiles.splice(i,1);hitHanna();return;
     }
   }
@@ -627,12 +636,14 @@ function hitHanna(){
   if(lives<=0){saveHS();stopLoop();setTimeout(function(){showEnd(false);},400);}
 }
 
-var saamanRunX=0, saamanRunAnim=0, jubPhase=0;
+var saamanRunX=0, saamanRunAnim=0, jubPhase=0, jubStarted=false;
 
 function showJubilee(){
+  if(jubStarted) return; // prevent double-firing
+  jubStarted=true;
   var w=getWorld();
   jubPhase=1;
-  saamanRunX=W+60; // start off right side of screen
+  saamanRunX=W+60;
   saamanRunAnim=0;
   stopLoop();
   // Run a mini animation loop just for Saaman running
@@ -652,13 +663,13 @@ function showJubilee(){
         var html='<div style="font-size:50px">❤️</div>'+
           '<h2>'+w.name+' gerettet!<br>Saaman ist frei! 🎉</h2>'+
           '<canvas id="jubC" width="220" height="130" style="margin:8px 0;border-radius:8px;background:rgba(255,255,255,0.05)"></canvas>'+
-          '<p style="color:#ffd700">Level '+(level+1)+'/15 abgeschlossen!</p>'+
+          '<p style="color:#ffd700">✅ Level '+(level+1)+'/15 abgeschlossen!</p>'+
           '<p>Punkte: <span style="color:#ffd700">'+score+'</span></p>';
         var btn=level>=14?'Spiel beenden! 🏆':'Nächstes Level!';
         showOv(html,btn,function(){
           jubPhase=0;
           if(level>=14){showEnd(true);}
-          else{level++;initLevel();startLoop();}
+          else{level++;updateHUD();initLevel();startLoop();}
         });
         setTimeout(drawJubilee,80);
       },400);
@@ -733,8 +744,16 @@ function showOv(html,btnTxt,cb){
   document.getElementById('ovbtn').textContent=btnTxt;
   ov.style.display='flex';
   var obtn=document.getElementById('ovbtn');
-  obtn.onclick=function(){ov.style.display='none';cb();};
-  obtn.addEventListener('touchend',function(e){e.stopPropagation();ov.style.display='none';cb();},{passive:true});
+  var _cbFired=false;
+  function fireCb(e){
+    if(_cbFired)return;
+    _cbFired=true;
+    if(e&&e.preventDefault)e.preventDefault();
+    ov.style.display='none';
+    setTimeout(function(){cb();},10); // tiny delay prevents double-fire
+  }
+  obtn.addEventListener('touchend',fireCb,{passive:false});
+  obtn.addEventListener('click',fireCb);
 }
 
 function updateHUD(){
@@ -853,7 +872,7 @@ function render(){
   for(var i=0;i<items.length;i++){var c=items[i];if(c.got)continue;var sx=c.wx-worldX,sy=c.y+Math.sin(c.bob)*5;ctx.font=c.type==='watermelon'?'28px serif':'22px serif';ctx.fillText(c.e,sx,sy+(c.type==='watermelon'?26:22));}
 
   // projectiles
-  for(var i=0;i<projectiles.length;i++){var pr=projectiles[i];ctx.globalAlpha=Math.min(1,pr.life*2);if(pr.type==='fireball'){ctx.globalAlpha=0.65;ctx.fillStyle='#ffcc00';ctx.beginPath();ctx.arc(pr.x,pr.y,13,0,Math.PI*2);ctx.fill();ctx.globalAlpha=Math.min(1,pr.life*1.5);ctx.font='20px serif';ctx.fillText('🔥',pr.x-10,pr.y+10);}else{ctx.fillStyle='#ff2200';ctx.fillRect(pr.x-16,pr.y-4,32,8);ctx.fillStyle='#ffaa00';ctx.fillRect(pr.x-13,pr.y-2,26,4);}ctx.globalAlpha=1;}
+  for(var i=0;i<projectiles.length;i++){var pr=projectiles[i];ctx.save();ctx.globalAlpha=Math.min(1,pr.life*2);if(pr.type==='fireball'){ctx.fillStyle='#ffdd00';ctx.beginPath();ctx.arc(pr.x,pr.y,14,0,Math.PI*2);ctx.fill();ctx.globalAlpha=1;ctx.font='20px serif';ctx.fillText('🔥',pr.x-10,pr.y+10);}else{ctx.save();ctx.fillStyle='#ff2200';ctx.fillRect(pr.x-16,pr.y-4,32,8);ctx.fillStyle='#ffaa00';ctx.fillRect(pr.x-13,pr.y-2,26,4);}ctx.restore();}
 
   for(var i=0;i<pops.length;i++){
     var pp2=pops[i];
@@ -1019,7 +1038,14 @@ function drawHanna(){
   ctx.restore();ctx.restore();
 }
 
+var _stFired=false;
+document.getElementById('stbtn').addEventListener('touchend',function(e){
+  if(_stFired)return;_stFired=true;e.preventDefault();
+  document.getElementById('start').style.display='none';
+  scaleGame();setupTouch();initLevel();updateHUD();startLoop();
+},{passive:false});
 document.getElementById('stbtn').addEventListener('click',function(){
+  if(_stFired)return;_stFired=true;
   document.getElementById('start').style.display='none';
   scaleGame();setupTouch();initLevel();updateHUD();startLoop();
 });
